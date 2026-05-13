@@ -1,5 +1,6 @@
 from pathlib import Path
 from src.ingestor import ingest_all_mhtml
+from src.processor import process_all_html
 # from src.processor import process_all_html
 # from src.loader import load_all_jsons
 # from src.run_data_profile import run_data_profile
@@ -48,6 +49,9 @@ def main():
             case "ingest":
                 print("🥉 Bronze: ingesting MHTML to HTML")
                 ingest_all_mhtml(SOURCE_DIR, BRONZE_DIR)
+            case "process":
+                print("🥈 Silver: processing HTML to JSON")
+                process_all_html(BRONZE_DIR, SILVER_DIR)
             case _:
                 print(f"Unknown command: {arg}")
 
