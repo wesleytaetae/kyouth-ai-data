@@ -1,8 +1,7 @@
 from pathlib import Path
 from src.ingestor import ingest_all_mhtml
 from src.processor import process_all_html
-# from src.processor import process_all_html
-# from src.loader import load_all_jsons
+from src.loader import load_all_jsons
 # from src.run_data_profile import run_data_profile
 
 import sys
@@ -22,21 +21,21 @@ DB_NAME = "jobs.db"
 #     db_path = GOLD_DIR/DB_NAME
 #     run_data_profile(db_path)
 
-# def run_gold():
-#     input_dir = SILVER_DIR
-#     output_dir = GOLD_DIR
-#     load_all_jsons(input_dir, output_dir)
+def run_gold():
+    input_dir = SILVER_DIR
+    output_dir = GOLD_DIR
+    load_all_jsons(input_dir, output_dir)
 
-# def run_silver():
-# 		input_dir = BRONZE_DIR
-# 		output_dir = SILVER_DIR
-#     process_all_html(input_dir, output_dir)
+def run_silver():
+    input_dir = BRONZE_DIR
+    output_dir = SILVER_DIR
+    process_all_html(input_dir, output_dir)
 
 
-# def run_bronze():
-#     input_dir = SOURCE_DIR
-# 		output_dir = BRONZE_DIR
-#     ingest_all_mhtml(input_dir, output_dir)
+def run_bronze():
+    input_dir = SOURCE_DIR
+    output_dir = BRONZE_DIR
+    ingest_all_mhtml(input_dir, output_dir)
 
 
 def main():
@@ -48,10 +47,13 @@ def main():
         match arg:
             case "ingest":
                 print("🥉 Bronze: ingesting MHTML to HTML")
-                ingest_all_mhtml(SOURCE_DIR, BRONZE_DIR)
+                run_bronze()
             case "process":
                 print("🥈 Silver: processing HTML to JSON")
-                process_all_html(BRONZE_DIR, SILVER_DIR)
+                run_silver()
+            case "load":
+                print("🥇 Gold: loading JSON to SQLite")
+                run_gold()
             case _:
                 print(f"Unknown command: {arg}")
 
