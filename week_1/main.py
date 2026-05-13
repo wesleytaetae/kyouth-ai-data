@@ -1,5 +1,5 @@
-from pathlib import Path # Figure out why use Path?
-# from src.ingestor import ingest_all_mhtml
+from pathlib import Path
+from src.ingestor import ingest_all_mhtml
 # from src.processor import process_all_html
 # from src.loader import load_all_jsons
 # from src.run_data_profile import run_data_profile
@@ -36,11 +36,23 @@ DB_NAME = "jobs.db"
 #     input_dir = SOURCE_DIR
 # 		output_dir = BRONZE_DIR
 #     ingest_all_mhtml(input_dir, output_dir)
-    
+
+
 def main():
-    print("This is the name of the program:", sys.argv[0])
-    print("Argument List:", str(sys.argv))
-    
+    if len(sys.argv) == 1:
+        print("No command provided.")
+        return
+
+    for arg in sys.argv[1:]:
+        match arg:
+            case "ingest":
+                print("🥉 Bronze: ingesting MHTML to HTML")
+                ingest_all_mhtml(SOURCE_DIR, BRONZE_DIR)
+            case _:
+                print(f"Unknown command: {arg}")
+
+    return
+
 
 if __name__ == "__main__":
     main()
