@@ -5,7 +5,12 @@ import quopri
 def ingest_all_mhtml(input_dir, output_dir):
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    if not input_dir.exists() or not input_dir.is_dir():
+        raise FileNotFoundError(f"Input directory not found: {input_dir}")
+
     mhtml_files = sorted([f for f in input_dir.iterdir() if f.suffix == ".mhtml"])
+    if not mhtml_files:
+        raise FileNotFoundError(f"No .mhtml files found in: {input_dir}")
     total = len(mhtml_files)
     extracted = 0
     failed = 0

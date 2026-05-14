@@ -13,7 +13,13 @@ class JobListing(BaseModel):
 def process_all_html(input_dir, output_dir):
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    if not input_dir.exists() or not input_dir.is_dir():
+        raise FileNotFoundError(f"Input directory not found: {input_dir}")
+
     html_files = sorted([f for f in input_dir.iterdir() if f.suffix == ".html"])
+    if not html_files:
+        raise FileNotFoundError(f"No .html files found in: {input_dir}")
+
     total = len(html_files)
     processed = 0
     skipped = 0

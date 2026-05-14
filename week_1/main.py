@@ -17,15 +17,18 @@ SILVER_DIR = Path("data/2_silver")
 GOLD_DIR = Path("data/3_gold")
 DB_NAME = "jobs.db"
 
+
 def run_profiler():
     db_path = GOLD_DIR / DB_NAME
     run_data_profile(db_path)
+
 
 def run_gold():
     input_dir = SILVER_DIR
     output_dir = GOLD_DIR
     print("🥇 Gold: loading JSON to SQLite")
     load_all_jsons(input_dir, output_dir)
+
 
 def run_silver():
     input_dir = BRONZE_DIR
@@ -62,7 +65,9 @@ def main():
                 run_gold()
                 run_profiler()
             case _:
-                print(f"Unknown command: {arg}, Usage: python main.py [ingest/process/load/profile/all]")
+                print(
+                    f"Unknown command: {arg}, Usage: python main.py [ingest/process/load/profile/all]"
+                )
 
     return
 
