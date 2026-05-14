@@ -6,12 +6,41 @@ This project builds a simple medallion-style ETL pipeline for job listings. It i
 
 ### Prerequisites
 
-- Python 3.14 installed
-- uv installed (Python package manager)
+- Python 3.14 (matches `pyproject.toml`)
+- `uv` (Python package manager)
+- Git (for cloning, optional if you already have the folder)
+- bs4 (beautifulsoup, for processing data from html to json)
+- ruff (linter)
+- pydantic (enforce contracts, data valiadtion)
+
+### Step-by-Step Local Setup
+
+1. Clone the repo (or open the existing folder).
+2. Create and activate a virtual environment (recommended).
+3. Install dependencies with `uv`.
+4. Run the pipeline commands.
+
+### Install `uv`
+
+```bash
+curl -Ls https://astral.sh/uv/install.sh | sh
+```
+
+Restart your shell so `uv` is on your PATH.
+
+### Create Virtual Environment
+
+```bash
+cd week_1
+uv venv
+source .venv/bin/activate
+```
 
 ### Install Dependencies
 
+```bash
 uv sync
+```
 
 ## Usage
 
