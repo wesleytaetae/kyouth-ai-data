@@ -45,9 +45,39 @@ uv sync
 ## Usage
 
 - uv run main.py ingest : converts `data/0_source/*.mhtml` to `data/1_bronze/*.html`
+```bash
+EXPECTED RESULTS:
+📊 Bronze Summary:
+Total: 100 | Extracted: 100 | Failed: 0
+```
+
 - uv run main.py process : parses `data/1_bronze/*.html` into `data/2_silver/*.json`
+```bash
+EXPECTED RESULTS:
+📊 Silver Summary:
+Total: 100 | Processed: 84 | Skipped: 16
+```
+
 - uv run main.py load : loads `data/2_silver/*.json` into `data/3_gold/jobs.db`
+```bash
+EXPECTED RESULTS:
+📊 Gold Summary:
+Total: 84 | Inserted: 84 | Skipped: 0
+```
+
 - uv run main.py profile : prints data quality metrics from `jobs.db`
+```bash
+EXPECTED RESULTS:
+--- 🔍 DATA QUALITY REPORT ---
+📈 Total Records: 84
+❓ Missing Values -> job_title: 0, company: 0, description: 0
+📝 Avg Description Length: 2654 chars
+⚠️  Shortest Description: 32 chars
+   ↳ source_id: 91647393 | job_title: Software Engineer
+🚨 Longest Description: 6781 chars
+   ↳ source_id: 91731564 | job_title: Automation Engineer
+```
+
 - uv run main.py all : runs full pipeline in order
 
 ## Technical Reflections
