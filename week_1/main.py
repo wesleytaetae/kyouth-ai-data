@@ -2,7 +2,7 @@ from pathlib import Path
 from src.ingestor import ingest_all_mhtml
 from src.processor import process_all_html
 from src.loader import load_all_jsons
-# from src.run_data_profile import run_data_profile
+from src.profiler import run_data_profile
 
 import sys
 
@@ -17,45 +17,52 @@ SILVER_DIR = Path("data/2_silver")
 GOLD_DIR = Path("data/3_gold")
 DB_NAME = "jobs.db"
 
-# def run_profiler():
-#     db_path = GOLD_DIR/DB_NAME
-#     run_data_profile(db_path)
+def run_profiler():
+    db_path = GOLD_DIR / DB_NAME
+    run_data_profile(db_path)
 
 def run_gold():
     input_dir = SILVER_DIR
     output_dir = GOLD_DIR
+    print("🥇 Gold: loading JSON to SQLite")
     load_all_jsons(input_dir, output_dir)
 
 def run_silver():
     input_dir = BRONZE_DIR
     output_dir = SILVER_DIR
+    print("🥈 Silver: processing HTML to JSON")
     process_all_html(input_dir, output_dir)
 
 
 def run_bronze():
     input_dir = SOURCE_DIR
     output_dir = BRONZE_DIR
+    print("🥉 Bronze: ingesting MHTML to HTML")
     ingest_all_mhtml(input_dir, output_dir)
 
 
 def main():
     if len(sys.argv) == 1:
-        print("No command provided.")
+        print("Usage: python main.py [ingest/process/load/profile/all]")
         return
 
     for arg in sys.argv[1:]:
         match arg:
             case "ingest":
-                print("🥉 Bronze: ingesting MHTML to HTML")
                 run_bronze()
             case "process":
-                print("🥈 Silver: processing HTML to JSON")
                 run_silver()
             case "load":
-                print("🥇 Gold: loading JSON to SQLite")
                 run_gold()
+            case "profile":
+                run_profiler()
+            case "all":
+                run_bronze()
+                run_silver()
+                run_gold()
+                run_profiler()
             case _:
-                print(f"Unknown command: {arg}")
+                print(f"Unknown command: {arg}, Usage: python main.py [ingest/process/load/profile/all]")
 
     return
 
