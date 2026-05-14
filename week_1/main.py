@@ -49,25 +49,24 @@ def main():
         print("Usage: python main.py [ingest/process/load/profile/all]")
         return
 
-    for arg in sys.argv[1:]:
-        match arg:
-            case "ingest":
-                run_bronze()
-            case "process":
-                run_silver()
-            case "load":
-                run_gold()
-            case "profile":
-                run_profiler()
-            case "all":
-                run_bronze()
-                run_silver()
-                run_gold()
-                run_profiler()
-            case _:
-                print(
-                    f"Unknown command: {arg}, Usage: python main.py [ingest/process/load/profile/all]"
-                )
+    match sys.argv[1]:
+        case "ingest":
+            run_bronze()
+        case "process":
+            run_silver()
+        case "load":
+            run_gold()
+        case "profile":
+            run_profiler()
+        case "all":
+            run_bronze()
+            run_silver()
+            run_gold()
+            run_profiler()
+        case _:
+            print(
+                f"Unknown command: {sys.argv[1]}, Usage: python main.py [ingest/process/load/profile/all]"
+            )
 
     return
 
