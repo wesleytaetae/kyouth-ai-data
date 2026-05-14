@@ -1,0 +1,40 @@
+## Project Description
+
+This project builds a simple medallion-style ETL pipeline for job listings. It ingests MHTML files, extracts HTML with quopri, extracts and structures data into JSON with beautifulsoup with pydantic type validation, loads it into SQLite, and runs data quality profiling.
+
+## Setup Instructions
+
+### Prerequisites
+
+- Python 3.14 installed
+- uv installed (Python package manager)
+
+### Install Dependencies
+
+uv sync
+
+## Usage
+
+- uv run main.py ingest : converts `data/0_source/*.mhtml` to `data/1_bronze/*.html`
+- uv run main.py process : parses `data/1_bronze/*.html` into `data/2_silver/*.json`
+- uv run main.py load : loads `data/2_silver/*.json` into `data/3_gold/jobs.db`
+- uv run main.py profile : prints data quality metrics from `jobs.db`
+- uv run main.py all : runs full pipeline in order
+
+## Technical Reflections
+
+### Module 1: The Extractor (Medallion & Lakehouses)
+Why is it useful to keep the original raw HTML files instead of directly inserting processed data into the database? What problems become easier to debug or recover from?
+- **Answer**: 1) Idempotency. Having the raw HTML files makes it so that if there is a critical bug that transforms and corrupts your database, you can just rerun the program and get everything back. 2) Flexibility. In the case where you decide to add one more data point to include in your database (e.g. salary range, location etc.), you do not have to rescrape the entire website, you can just update loader.py to include more tags.
+
+### Module 2: Treatment Plant (ETL vs ELT & Scale)
+Why do cloud systems prefer loading raw data first before cleaning it (ELT)? What problems happen when processing files sequentially, and how does distributed processing help?
+- **Answer**: Cloud systems prefer loading raw data to allow for flexible re-processing of data and the same points discussed in Module 1. Today's cloud services provides cheap "cold storage" like AWS S3, hence there is next to no cost concerns. You will only pay more for compute power to transform the data on demand. There are a few issues that might happen when processing files sequentially, but the most prominent is Head-of-line blocking. Assuming you are processing through 1,000,000 data points, and file 100 is corrupted. It halts your entire processing pipeline. Distributed processing utilizes parallelism, where you have more worker processes that is in charge of a small percentage of the total data points (chunks). If one of the worker process gets caught up by a corrupted file, the rest of the workers can still continue with the processing.
+
+### Module 3: The Blueprint & The Vault (Storage & Contracts)
+What should happen if an important field like job_title disappears? Why fail early instead of silently inserting nulls into DB? How does INSERT OR IGNORE help prevent duplicate records?
+- **Answer**: If an important field disappears, it should fail early instead of silently inserting nulls into DB due to data poisoning. Assuming a scenario where you keep track of the salary of the job in the database, if there are entries where salary = null, it might show up as 0 in your analytics processor, and drag the average salary down. INSERT OR IGNORE help prevent duplicate records by checking PRIMARY key values (source_id in this case), and returning an exception if there is already a duplicate.
+
+### Module 4: The QA Inspector & Orchestrator (Orchestration & DAGs)
+What happens if processor.py crashes halfway? How are automated orchestration tools more reliable than manual retries with Python scripts?
+- **Answer**: If processor.py crashes halfway, depending on the reason it will throw/raise an error/exception. Automated orchestration tools are more reliable as in they help with state-persistence and observability. For example, if your python script is hosted in a docker container/server that reboots or kills the process during a retry, the state of the script on reboot is not tracked (the user won't know how many retries it made, where in the script did it crash previously etc). Orchestration tools like airflow back up the state with the database, and allows any restarts to immediately resume from the point of failure.
