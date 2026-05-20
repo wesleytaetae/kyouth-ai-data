@@ -132,7 +132,7 @@ def main() -> None:
         model = sys.argv[1]
         prompt = " ".join(sys.argv[2:])
     else:
-        print("oops please input something")
+        print("[Error] Usage: uv run prompt_mode.py [model] [prompt]")
         return
 
     response = prompt_model(model, prompt)
