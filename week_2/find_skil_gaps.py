@@ -138,9 +138,15 @@ def _prompt_llm_gaps(model: str, resume_text: str, skills: List[str]) -> Set[str
 			f"SKILLS:\n{json.dumps(batch, ensure_ascii=False)}"
 		)
 
+		last_error = ""
 		for attempt in range(1, MAX_RETRIES + 1):
 			response = prompt_model(model, prompt)
 			try:
+				if response.startswith("[Gemini Error]") or response.startswith(
+					"[Ollama Error]"
+				) or response.startswith("[Error]"):
+					raise ValueError(response)
+
 				start = response.find("[")
 				end = response.rfind("]")
 				if start == -1 or end == -1 or end <= start:
@@ -155,6 +161,11 @@ def _prompt_llm_gaps(model: str, resume_text: str, skills: List[str]) -> Set[str
 						all_gaps.add(value)
 				break
 			except Exception as exc:
+				last_error = str(exc)
+				if last_error.startswith("[Gemini Error]") or last_error.startswith(
+					"[Ollama Error]"
+				) or last_error.startswith("[Error]"):
+					break
 				print(f"Attempt {attempt} failed: {exc}")
 				if attempt < MAX_RETRIES:
 					wait_time = BACKOFF_SECONDS[
@@ -162,6 +173,13 @@ def _prompt_llm_gaps(model: str, resume_text: str, skills: List[str]) -> Set[str
 					]
 					print(f"Retrying in {wait_time}s...")
 					time.sleep(wait_time)
+				else:
+					raise
+
+		if last_error.startswith("[Gemini Error]") or last_error.startswith(
+			"[Ollama Error]"
+		) or last_error.startswith("[Error]"):
+			raise ValueError(last_error)
 
 	return all_gaps
 
@@ -199,7 +217,21 @@ def find_skill_gaps(input_file_path: str, db_url: str) -> SkillGapResult:
 
 	resume_skills = _extract_resume_skills(resume_text_normalized, skills)
 
-	llm_gap_skills = _prompt_llm_gaps(SELECTED_MODEL, resume_text_normalized, skills)
+	try:
+		llm_gap_skills = _prompt_llm_gaps(
+			SELECTED_MODEL, resume_text_normalized, skills
+		)
+	except Exception as exc:
+		print(exc)
+		return SkillGapResult(
+			gaps=[],
+			resume_skills=sorted(resume_skills),
+			total_skills=len(skills),
+			model_used=SELECTED_MODEL,
+			llm_matches=0,
+			elapsed_seconds=round(time.time() - start_time, 2),
+			token_estimate=_estimate_tokens(resume_text_normalized) + len(skills),
+		)
 	canonical_skills = set(skills)
 	llm_gap_skills = {skill for skill in llm_gap_skills if skill in canonical_skills}
 
