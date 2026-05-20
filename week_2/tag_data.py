@@ -31,7 +31,10 @@ def _build_batch_prompt(batch: List[Tuple[str, str]]) -> str:
     lines = [
         "Extract the technical stack used in each job description.",
         "Return ONLY a JSON array of objects with keys: source_id, tech_stack.",
-        "The tech_stack value must be a comma-separated string.",
+        "The tech_stack value must be a comma-separated string of atomic skills.",
+        "Split grouped phrases into individual skills (e.g., 'Backend language (PHP, Python, Node.js)' => 'PHP, Python, Node.js').",
+        "Do not include category labels or prefixes like 'Backend language'.",
+        "Prefer canonical tool/library names and keep each skill separate.",
         "If unsure, make a best-effort guess based on the description.",
         "",
     ]
@@ -107,7 +110,8 @@ def _prompt_batch_fallback(
     for source_id, description in batch:
         prompt = (
             "Extract the technical stack from this job description. "
-            "Return only a comma-separated list.\n\n"
+            "Return only a comma-separated list of atomic skills. "
+            "Split grouped phrases into individual skills and remove category labels.\n\n"
             f"DESCRIPTION: {_truncate(description, MAX_DESC_CHARS)}"
         )
         response = prompt_model(model, prompt)
