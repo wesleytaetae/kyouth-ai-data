@@ -58,7 +58,17 @@ def _post_json(url: str, payload: dict, timeout: float = 60.0) -> dict:
 
 def _prompt_ollama(model: str, prompt: str) -> str:
     url = "http://127.0.0.1:11434/api/generate"
-    payload = {"model": model, "prompt": prompt, "stream": False}
+    payload = {
+        "model": model,
+        "prompt": prompt,
+        "stream": False,
+        "options": {
+            "temperature": 0,
+            "top_k": 1,
+            "top_p": 1,
+            "seed": 0,
+        },
+    }
     try:
         data = _post_json(url, payload, timeout=120.0)
         return data.get("response", "").strip()
@@ -81,7 +91,10 @@ def _prompt_gemini(model: str, prompt: str) -> str:
         + ":generateContent?key="
         + api_key
     )
-    payload = {"contents": [{"parts": [{"text": prompt}]}]}
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"temperature": 0, "topP": 1, "topK": 1},
+    }
     try:
         data = _post_json(url, payload, timeout=120.0)
         candidates = data.get("candidates") or []
