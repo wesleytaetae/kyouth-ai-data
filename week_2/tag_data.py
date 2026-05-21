@@ -8,12 +8,47 @@ from typing import Iterable, List, Tuple
 from prompt_mode import prompt_model
 
 
+_ENV_LOADED = False
+
+
+def _load_env_file() -> None:
+    global _ENV_LOADED
+    if _ENV_LOADED:
+        return
+    _ENV_LOADED = True
+
+    env_path = os.path.join(os.path.dirname(__file__), ".env")
+    if not os.path.exists(env_path):
+        return
+
+    try:
+        with open(env_path, "r", encoding="utf-8") as handle:
+            for raw_line in handle:
+                line = raw_line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if "=" not in line:
+                    continue
+                key, value = line.split("=", 1)
+                key = key.strip()
+                value = value.strip()
+                if value and value[0] == value[-1] and value[0] in {'"', "'"}:
+                    value = value[1:-1]
+                if key and key not in os.environ:
+                    os.environ[key] = value
+    except OSError:
+        return
+
+
+_load_env_file()
+
 DEFAULT_MODEL = "llama3.1"
 DEFAULT_BATCH_SIZE = 5
 MAX_RETRIES = 3
 BACKOFF_SECONDS = [2, 4, 8]
 MAX_DESC_CHARS = 2000
 SELECTED_MODEL = DEFAULT_MODEL
+DEFAULT_DB_PATH = os.getenv("DB_PATH")
 
 
 def _chunk_rows(rows: List[Tuple[str, str]], size: int) -> Iterable[List[Tuple[str, str]]]:
@@ -181,7 +216,11 @@ def main() -> None:
     global SELECTED_MODEL
 
     args = sys.argv[1:]
-    db_path = "data/jobs_d1.db"
+    db_path = DEFAULT_DB_PATH
+
+    if not db_path and len(args) == 0:
+        print("[Error] DB_PATH is required. Set it in .env or pass a db path arg.")
+        return
 
     if len(args) == 1:
         if os.path.exists(args[0]):

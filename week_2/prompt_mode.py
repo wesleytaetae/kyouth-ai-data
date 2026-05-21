@@ -70,7 +70,7 @@ def _prompt_ollama(model: str, prompt: str) -> str:
         },
     }
     try:
-        data = _post_json(url, payload, timeout=120.0)
+        data = _post_json(url, payload, timeout=240.0)
         return data.get("response", "").strip()
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8") if exc.fp else ""

@@ -7,14 +7,49 @@ import time
 from typing import Iterable, List, Set
 
 from pydantic import BaseModel, Field
+from pypdf import PdfReader
 
 from prompt_mode import prompt_model
 
 
+_ENV_LOADED = False
+
+
+def _load_env_file() -> None:
+	global _ENV_LOADED
+	if _ENV_LOADED:
+		return
+	_ENV_LOADED = True
+
+	env_path = os.path.join(os.path.dirname(__file__), ".env")
+	if not os.path.exists(env_path):
+		return
+
+	try:
+		with open(env_path, "r", encoding="utf-8") as handle:
+			for raw_line in handle:
+				line = raw_line.strip()
+				if not line or line.startswith("#"):
+					continue
+				if "=" not in line:
+					continue
+				key, value = line.split("=", 1)
+				key = key.strip()
+				value = value.strip()
+				if value and value[0] == value[-1] and value[0] in {'"', "'"}:
+					value = value[1:-1]
+				if key and key not in os.environ:
+					os.environ[key] = value
+	except OSError:
+		return
+
+
+_load_env_file()
+
 DEFAULT_MODEL = "llama3.1"
 SELECTED_MODEL = DEFAULT_MODEL
-DEFAULT_RESUME_PATH = "data/resume_d3.txt"
-DEFAULT_DB_PATH = "data/jobs_d1.db"
+DEFAULT_RESUME_PATH = os.getenv("RESUME_PATH", "data/resume_d3_eval.pdf")
+DEFAULT_DB_PATH = os.getenv("DB_PATH", "data/jobs_d3_eval.db")
 
 SKILL_BATCH_SIZE = 200
 MAX_RETRIES = 3
@@ -32,11 +67,25 @@ class SkillGapResult(BaseModel):
 
 
 def _safe_read_text(path: str) -> str:
+	if path.lower().endswith(".pdf"):
+		return _extract_pdf_text(path)
 	try:
 		with open(path, "r", encoding="utf-8", errors="replace") as handle:
 			return handle.read()
 	except OSError as exc:
 		print(f"[Error] Failed to read resume: {exc}")
+		return ""
+
+
+def _extract_pdf_text(path: str) -> str:
+	try:
+		reader = PdfReader(path)
+		parts: List[str] = []
+		for page in reader.pages:
+			parts.append(page.extract_text() or "")
+		return "\n".join(parts)
+	except Exception as exc:
+		print(f"[Error] Failed to read PDF resume: {exc}")
 		return ""
 
 
@@ -133,12 +182,14 @@ def _prompt_llm_gaps(model: str, resume_text: str, skills: List[str]) -> Set[str
 			"and return ONLY the remaining skills as a JSON array. "
 			"Choose ONLY from the provided skills list. "
 			"Do not infer synonyms unless the exact skill appears in the resume text. "
-			"If none are missing, return an empty JSON array.\n\n"
+			"If none are missing, return an empty JSON array. "
+			"Return JSON only: no prose, no Markdown, no code fences, no extra keys.\n\n"
 			f"RESUME:\n{resume_text}\n\n"
 			f"SKILLS:\n{json.dumps(batch, ensure_ascii=False)}"
 		)
 
 		last_error = ""
+		response = ""
 		for attempt in range(1, MAX_RETRIES + 1):
 			response = prompt_model(model, prompt)
 			try:
@@ -166,6 +217,10 @@ def _prompt_llm_gaps(model: str, resume_text: str, skills: List[str]) -> Set[str
 					"[Ollama Error]"
 				) or last_error.startswith("[Error]"):
 					break
+				cleaned = " ".join(response.split())
+				preview = cleaned[:1200] + ("..." if len(cleaned) > 1200 else "")
+				print("Malformed JSON response preview:")
+				print(preview)
 				print(f"Attempt {attempt} failed: {exc}")
 				if attempt < MAX_RETRIES:
 					wait_time = BACKOFF_SECONDS[
@@ -216,10 +271,21 @@ def find_skill_gaps(input_file_path: str, db_url: str) -> SkillGapResult:
 		)
 
 	resume_skills = _extract_resume_skills(resume_text_normalized, skills)
+	candidate_skills = [skill for skill in skills if skill not in resume_skills]
+	if not candidate_skills:
+		return SkillGapResult(
+			gaps=[],
+			resume_skills=sorted(resume_skills),
+			total_skills=len(skills),
+			model_used=SELECTED_MODEL,
+			llm_matches=0,
+			elapsed_seconds=round(time.time() - start_time, 2),
+			token_estimate=_estimate_tokens(resume_text_normalized) + len(skills),
+		)
 
 	try:
 		llm_gap_skills = _prompt_llm_gaps(
-			SELECTED_MODEL, resume_text_normalized, skills
+			SELECTED_MODEL, resume_text_normalized, candidate_skills
 		)
 	except Exception as exc:
 		print(exc)
@@ -232,13 +298,14 @@ def find_skill_gaps(input_file_path: str, db_url: str) -> SkillGapResult:
 			elapsed_seconds=round(time.time() - start_time, 2),
 			token_estimate=_estimate_tokens(resume_text_normalized) + len(skills),
 		)
-	canonical_skills = set(skills)
+	canonical_skills = set(candidate_skills)
 	llm_gap_skills = {skill for skill in llm_gap_skills if skill in canonical_skills}
+	llm_gap_skills = {skill for skill in llm_gap_skills if skill not in resume_skills}
 
 	if llm_gap_skills:
 		gap_list = sorted(llm_gap_skills)
 	else:
-		gap_list = sorted(skill for skill in skills if skill not in resume_skills)
+		gap_list = sorted(candidate_skills)
 
 	elapsed = round(time.time() - start_time, 2)
 	token_estimate = _estimate_tokens(resume_text_normalized) + len(skills)

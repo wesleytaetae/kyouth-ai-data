@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-RESUME_FILE="data/resume_d3.txt"
+RESUME_FILE="data/resume_d3_eval.pdf"
 OUT_DIR="data/skill_gap_runs"
 MODEL_ARG=""
 
