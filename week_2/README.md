@@ -100,6 +100,11 @@ gaps=['aws', 'docker', 'sql', 'tensorflow', ...] time=4.12 tokens=102
 
 ### API / Function Reference
 
+Module interactions:
+- prompt_mode.py is the shared LLM client used by tag_data.py and find_skil_gaps.py.
+- tag_data.py reads raw job descriptions from the sqlite DB and writes tech_stack back into the same DB.
+- find_skil_gaps.py reads the tagged tech_stack from the DB, compares against the resume text/PDF, and outputs gaps.
+
 - tag_data(db_url: str)
 	- Purpose: Read jobs from the sqlite DB and populate tech_stack for rows with missing values.
 	- Inputs: db_url is a path to the sqlite database file.
