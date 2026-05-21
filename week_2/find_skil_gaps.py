@@ -50,6 +50,7 @@ DEFAULT_MODEL = "llama3.1"
 SELECTED_MODEL = DEFAULT_MODEL
 DEFAULT_RESUME_PATH = os.getenv("RESUME_PATH", "data/resume_d3_eval.pdf")
 DEFAULT_DB_PATH = os.getenv("DB_PATH", "data/jobs_d3_eval.db")
+DEBUG_LOG = os.getenv("DEBUG_LOG", "").strip().lower() in {"1", "true", "yes", "y"}
 
 SKILL_BATCH_SIZE = 200
 MAX_RETRIES = 3
@@ -243,6 +244,13 @@ def _estimate_tokens(text: str) -> int:
 	return max(1, len(text.split()))
 
 
+def _log_debug(label: str, items: List[str]) -> None:
+	if not DEBUG_LOG:
+		return
+	print(f"[Debug] {label}: {len(items)}")
+	print(json.dumps(items, ensure_ascii=False))
+
+
 def find_skill_gaps(input_file_path: str, db_url: str) -> SkillGapResult:
 	start_time = time.time()
 
@@ -270,8 +278,11 @@ def find_skill_gaps(input_file_path: str, db_url: str) -> SkillGapResult:
 			token_estimate=_estimate_tokens(resume_text_normalized),
 		)
 
+	_log_debug("input_skills", skills)
 	resume_skills = _extract_resume_skills(resume_text_normalized, skills)
+	_log_debug("resume_skills", sorted(resume_skills))
 	candidate_skills = [skill for skill in skills if skill not in resume_skills]
+	_log_debug("pre_filter_skills", candidate_skills)
 	if not candidate_skills:
 		return SkillGapResult(
 			gaps=[],
@@ -301,6 +312,7 @@ def find_skill_gaps(input_file_path: str, db_url: str) -> SkillGapResult:
 	canonical_skills = set(candidate_skills)
 	llm_gap_skills = {skill for skill in llm_gap_skills if skill in canonical_skills}
 	llm_gap_skills = {skill for skill in llm_gap_skills if skill not in resume_skills}
+	_log_debug("post_filter_skills", sorted(llm_gap_skills))
 
 	if llm_gap_skills:
 		gap_list = sorted(llm_gap_skills)
