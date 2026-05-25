@@ -1,0 +1,11 @@
+# kyouth requirements
+data/
+backend/__pycache__/
+frontend/__pycache__/
+backend/src/__pycache__/
+frontend/src/__pycache__/
+backend/.ruff_cache/
+frontend/.ruff_cache/
+backend/.venv/
+frontend/.venv/
+.env
