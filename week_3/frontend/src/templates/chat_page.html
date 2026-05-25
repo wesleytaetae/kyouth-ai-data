@@ -11,22 +11,120 @@
         crossorigin="anonymous"
     >
     <style>
+        :root {
+            --chat-blue: #2563eb;
+            --chat-blue-dark: #1d4ed8;
+            --chat-blue-soft: #dbeafe;
+            --chat-surface: rgba(255, 255, 255, 0.9);
+            --chat-border: rgba(148, 163, 184, 0.28);
+            --chat-shadow: 0 28px 60px rgba(37, 99, 235, 0.16);
+        }
+
         body {
-            background: #f3f4f6;
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at top left, rgba(96, 165, 250, 0.26), transparent 28%),
+                radial-gradient(circle at top right, rgba(59, 130, 246, 0.18), transparent 24%),
+                linear-gradient(180deg, #eef5ff 0%, #f8fbff 44%, #edf4ff 100%);
         }
 
         .chat-shell {
-            max-width: 900px;
+            max-width: 980px;
+        }
+
+        .chat-card {
+            overflow: hidden;
+            border: 1px solid var(--chat-border);
+            border-radius: 28px;
+            background: var(--chat-surface);
+            box-shadow: var(--chat-shadow);
+            backdrop-filter: blur(12px);
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, var(--chat-blue-dark), var(--chat-blue));
+            color: #fff;
+        }
+
+        .chat-header .status-pill {
+            background: rgba(255, 255, 255, 0.16);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            color: rgba(255, 255, 255, 0.92);
         }
 
         .chat-history {
-            height: 55vh;
+            height: 52vh;
             overflow-y: auto;
-            background: #ffffff;
+            background:
+                linear-gradient(180deg, rgba(219, 234, 254, 0.45) 0%, rgba(255, 255, 255, 0.92) 18%, rgba(255, 255, 255, 0.98) 100%);
+        }
+
+        .chat-history::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        .chat-history::-webkit-scrollbar-thumb {
+            background: rgba(59, 130, 246, 0.35);
+            border-radius: 999px;
+        }
+
+        .message-row {
+            display: flex;
+        }
+
+        .message-row.user {
+            justify-content: flex-end;
+        }
+
+        .message-row.assistant,
+        .message-row.system {
+            justify-content: flex-start;
         }
 
         .message {
-            max-width: 85%;
+            max-width: min(78%, 620px);
+            border-radius: 22px;
+            padding: 0.95rem 1rem;
+            border: 1px solid transparent;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+        }
+
+        .message.user {
+            background: linear-gradient(135deg, var(--chat-blue), #3b82f6);
+            color: #fff;
+            border-bottom-right-radius: 8px;
+        }
+
+        .message.assistant {
+            background: #fff;
+            color: #0f172a;
+            border-color: rgba(148, 163, 184, 0.22);
+            border-bottom-left-radius: 8px;
+        }
+
+        .message.system {
+            background: #eff6ff;
+            color: #1e3a8a;
+            border-color: rgba(59, 130, 246, 0.18);
+        }
+
+        .message.system.error {
+            background: #fef2f2;
+            color: #991b1b;
+            border-color: rgba(239, 68, 68, 0.24);
+        }
+
+        .message.system.warning {
+            background: #fff7ed;
+            color: #9a3412;
+            border-color: rgba(249, 115, 22, 0.22);
+        }
+
+        .message-label {
+            font-size: 0.75rem;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            opacity: 0.72;
         }
 
         .message pre {
@@ -35,52 +133,112 @@
             margin-bottom: 0;
             font-family: inherit;
         }
+
+        .composer-card {
+            background: rgba(255, 255, 255, 0.88);
+            border-top: 1px solid rgba(148, 163, 184, 0.2);
+        }
+
+        .composer-card .form-control {
+            border-radius: 16px;
+            border-color: rgba(148, 163, 184, 0.35);
+        }
+
+        .composer-card .form-control:focus {
+            border-color: rgba(37, 99, 235, 0.48);
+            box-shadow: 0 0 0 0.25rem rgba(37, 99, 235, 0.12);
+        }
+
+        .send-button {
+            border-radius: 999px;
+            padding-inline: 1.5rem;
+            background: linear-gradient(135deg, var(--chat-blue-dark), var(--chat-blue));
+            border: none;
+            box-shadow: 0 12px 24px rgba(37, 99, 235, 0.22);
+        }
+
+        .send-button:hover,
+        .send-button:focus {
+            background: linear-gradient(135deg, #1e40af, var(--chat-blue-dark));
+        }
+
+        @media (max-width: 768px) {
+            .chat-shell {
+                padding-inline: 0.45rem;
+            }
+
+            .chat-history {
+                height: 48vh;
+            }
+
+            .message {
+                max-width: 92%;
+            }
+        }
     </style>
 </head>
 <body class="py-4">
     <main class="container chat-shell" data-backend-url="{{ backend_url }}">
-        <section class="card shadow-sm border-0">
-            <div class="card-body p-4">
-                <div class="mb-4">
-                    <h1 class="h3 mb-1">Resume Helper Chatbot</h1>
-                    <p class="text-body-secondary mb-0">Send a message and optionally attach a PDF to include its extracted text.</p>
+        <section class="chat-card">
+            <div class="chat-header p-4 p-md-5">
+                <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+                    <div>
+                        <div class="status-pill d-inline-flex align-items-center rounded-pill px-3 py-2 small mb-3">
+                            AI Resume Assistant
+                        </div>
+                        <h1 class="h3 mb-2">Chat with your resume helper</h1>
+                        <p class="mb-0 text-white-50">Ask questions, paste drafts, or attach a PDF resume to send its extracted text along with your message.</p>
+                    </div>
+                    <div class="status-pill rounded-pill px-3 py-2 small">
+                        Port 8000 frontend
+                    </div>
                 </div>
+            </div>
 
-                <div id="chat-history" class="chat-history border rounded-3 p-3 mb-3 d-flex flex-column gap-3">
-                    <div class="message bg-light border rounded-3 p-3">
-                        <strong class="d-block mb-1">Assistant</strong>
+            <div id="chat-history" class="chat-history p-3 p-md-4 d-flex flex-column gap-3">
+                <div class="message-row assistant">
+                    <div class="message assistant">
+                        <div class="message-label mb-1">Assistant</div>
                         <p class="mb-0">Hello! Ask me something.</p>
                     </div>
                 </div>
+            </div>
 
+            <div class="composer-card p-3 p-md-4">
                 <form id="chat-form" class="d-flex flex-column gap-3">
-                    <div>
-                        <label for="message" class="form-label">Message</label>
-                        <textarea
-                            id="message"
-                            class="form-control"
-                            rows="4"
-                            placeholder="Type your message here"
-                            required
-                        ></textarea>
-                    </div>
-
-                    <div>
-                        <label for="pdf-file" class="form-label">Attach PDF</label>
-                        <input
-                            id="pdf-file"
-                            class="form-control"
-                            type="file"
-                            accept="application/pdf"
-                        >
-                        <div id="pdf-status" class="form-text">No PDF attached.</div>
-                    </div>
-
-                    <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
-                        <div id="request-status" class="text-body-secondary small">
-                            Backend URL: {{ backend_url if backend_url else "Not configured" }}
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label for="message" class="form-label fw-semibold text-primary-emphasis">Message</label>
+                            <textarea
+                                id="message"
+                                class="form-control"
+                                rows="4"
+                                placeholder="Type your message here"
+                                required
+                            ></textarea>
                         </div>
-                        <button id="send-button" type="submit" class="btn btn-primary px-4">Send</button>
+
+                        <div class="col-12 col-lg-6">
+                            <label for="pdf-file" class="form-label fw-semibold text-primary-emphasis">Attach PDF</label>
+                            <input
+                                id="pdf-file"
+                                class="form-control"
+                                type="file"
+                                accept="application/pdf"
+                            >
+                            <div id="pdf-status" class="form-text">No PDF attached.</div>
+                        </div>
+
+                        <div class="col-12 col-lg-6">
+                            <label class="form-label fw-semibold text-primary-emphasis">Backend Status</label>
+                            <div id="request-status" class="form-control bg-body-tertiary d-flex align-items-center small text-body-secondary">
+                                Backend URL: {{ backend_url if backend_url else "Not configured" }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end">
+                        <button id="send-button" type="submit" class="btn btn-primary send-button">Send Message</button>
                     </div>
                 </form>
             </div>
@@ -109,19 +267,37 @@
             text: "",
         };
 
-        function addMessage(role, content, toneClass) {
-            const wrapper = document.createElement("div");
-            wrapper.className = `message border rounded-3 p-3 ${toneClass}`;
+        function addMessage(role, content, variant = "assistant") {
+            const row = document.createElement("div");
+            row.className = `message-row ${variant}`;
 
-            const title = document.createElement("strong");
-            title.className = "d-block mb-1";
+            const wrapper = document.createElement("div");
+            wrapper.className = `message ${variant}`;
+
+            if (variant === "error") {
+                wrapper.className = "message system error";
+                row.className = "message-row system";
+            }
+
+            if (variant === "warning") {
+                wrapper.className = "message system warning";
+                row.className = "message-row system";
+            }
+
+            if (variant === "system") {
+                row.className = "message-row system";
+            }
+
+            const title = document.createElement("div");
+            title.className = "message-label mb-1";
             title.textContent = role;
 
             const body = document.createElement("pre");
             body.textContent = content;
 
             wrapper.append(title, body);
-            chatHistory.appendChild(wrapper);
+            row.appendChild(wrapper);
+            chatHistory.appendChild(row);
             chatHistory.scrollTop = chatHistory.scrollHeight;
         }
 
@@ -162,7 +338,7 @@
                 pdfPayload = { filename: null, text: "" };
                 fileInput.value = "";
                 pdfStatus.textContent = "Could not read that PDF.";
-                addMessage("System", `PDF processing failed: ${error.message}`, "bg-warning-subtle");
+                addMessage("System", `PDF processing failed: ${error.message}`, "warning");
             }
         });
 
@@ -175,7 +351,7 @@
             }
 
             if (!backendUrl) {
-                addMessage("System", "BACKEND_URL is not configured. Add it to your .env file first.", "bg-danger-subtle");
+                addMessage("System", "BACKEND_URL is not configured. Add it to your .env file first.", "error");
                 requestStatus.textContent = "Missing BACKEND_URL";
                 return;
             }
@@ -186,12 +362,12 @@
                 pdf_text: pdfPayload.text,
             };
 
-            addMessage("You", message, "bg-primary-subtle");
+            addMessage("You", message, "user");
             if (pdfPayload.filename) {
                 addMessage(
                     "System",
                     `Attached PDF: ${pdfPayload.filename}\n\n${pdfPayload.text || "No text extracted."}`,
-                    "bg-light"
+                    "system"
                 );
             }
 
@@ -221,11 +397,11 @@
                     throw new Error(`Backend returned ${response.status}: ${responseBody}`);
                 }
 
-                addMessage("Assistant", responseBody || "Request sent successfully.", "bg-success-subtle");
+                addMessage("Assistant", responseBody || "Request sent successfully.", "assistant");
                 requestStatus.textContent = `Sent to ${backendUrl}`;
                 messageInput.value = "";
             } catch (error) {
-                addMessage("System", `Request failed: ${error.message}`, "bg-danger-subtle");
+                addMessage("System", `Request failed: ${error.message}`, "error");
                 requestStatus.textContent = `Could not reach ${backendUrl}`;
             } finally {
                 sendButton.disabled = false;
