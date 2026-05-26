@@ -5,7 +5,7 @@ import urllib.error
 import urllib.request
 
 
-OLLAMA_MODELS = {"llama3.1", "phi3", "deepseek-r1"}
+OLLAMA_MODELS = {"llama3.1", "phi3", "deepseek-r1", "deepseek-r1:1.5b"}
 GEMINI_MODELS = {
     "gemini-2.5-flash",
     "gemini-2.5-flash-lite",
@@ -56,8 +56,17 @@ def _post_json(url: str, payload: dict, timeout: float = 60.0) -> dict:
         return json.loads(body) if body else {}
 
 
+def _get_ollama_timeout() -> float:
+    raw_timeout = os.getenv("OLLAMA_TIMEOUT", "60")
+    try:
+        return max(float(raw_timeout), 1.0)
+    except ValueError:
+        return 60.0
+
+
 def _prompt_ollama(model: str, prompt: str) -> str:
-    url = "http://127.0.0.1:11434/api/generate"
+    ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/")
+    url = f"{ollama_base_url}/api/generate"
     payload = {
         "model": model,
         "prompt": prompt,
@@ -70,7 +79,7 @@ def _prompt_ollama(model: str, prompt: str) -> str:
         },
     }
     try:
-        data = _post_json(url, payload, timeout=240.0)
+        data = _post_json(url, payload, timeout=_get_ollama_timeout())
         return data.get("response", "").strip()
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8") if exc.fp else ""
@@ -96,7 +105,7 @@ def _prompt_gemini(model: str, prompt: str) -> str:
         "generationConfig": {"temperature": 0, "topP": 1, "topK": 1},
     }
     try:
-        data = _post_json(url, payload, timeout=120.0)
+        data = _post_json(url, payload, timeout=10.0)
         candidates = data.get("candidates") or []
         if not candidates:
             return f"[Gemini Error] Empty response. {data}"

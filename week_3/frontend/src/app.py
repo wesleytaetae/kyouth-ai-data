@@ -10,8 +10,10 @@ import os
 app = FastAPI()
 
 BASE_DIR = Path(__file__).resolve().parent
+PROJECT_DIR = BASE_DIR.parents[1]
+ENV_PATH = PROJECT_DIR / ".env"
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
-load_dotenv()
+load_dotenv(ENV_PATH)
 
 
 @app.get("/", response_class=HTMLResponse)
