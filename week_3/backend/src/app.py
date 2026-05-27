@@ -8,6 +8,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
+import find_skil_gaps
+from prompt_mode import prompt_model
 
 
 CURRENT_FILE = Path(__file__).resolve()
@@ -29,13 +31,12 @@ WEEK_2_DIR = next(
     None,
 )
 if WEEK_2_DIR is None:
-    raise RuntimeError("Could not locate the week_2 directory needed for prompt_mode.py")
+    raise RuntimeError(
+        "Could not locate the week_2 directory needed for prompt_mode.py"
+    )
 
 if str(WEEK_2_DIR) not in sys.path:
     sys.path.insert(0, str(WEEK_2_DIR))
-
-import find_skil_gaps
-from prompt_mode import prompt_model
 
 
 def _parse_origins(value: str) -> list[str]:
@@ -71,7 +72,9 @@ class ChatResponse(BaseModel):
 
 
 def _resolve_db_path() -> str:
-    raw_path = os.getenv("SKILL_GAP_DB_PATH") or os.getenv("DB_PATH", "data/jobs_d3_eval.db")
+    raw_path = os.getenv("SKILL_GAP_DB_PATH") or os.getenv(
+        "DB_PATH", "data/jobs_d3_eval.db"
+    )
     path = Path(raw_path)
     if path.is_absolute():
         return str(path)
