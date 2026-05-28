@@ -71,6 +71,14 @@ class ChatResponse(BaseModel):
     model: str
 
 
+def _wants_skill_gap(message: str) -> bool:
+    return "find skill gap" in message.lower()
+
+
+def _wants_resume_summary(message: str) -> bool:
+    return "summarize this resume" in message.lower()
+
+
 def _resolve_db_path() -> str:
     raw_path = os.getenv("SKILL_GAP_DB_PATH") or os.getenv(
         "DB_PATH", "data/jobs_d3_eval.db"
@@ -157,8 +165,15 @@ def healthcheck() -> dict[str, str]:
 @app.post("/chat", response_model=ChatResponse)
 def chat(payload: ChatRequest) -> JSONResponse:
     model = (payload.model or os.getenv("DEFAULT_MODEL", "llama3.1")).strip()
-    if (payload.pdf_text or "").strip():
-        reply = _run_skill_gap_analysis(payload, model)
+    pdf_text = (payload.pdf_text or "").strip()
+    if pdf_text:
+        if _wants_resume_summary(payload.message):
+            prompt = _build_prompt(payload)
+            reply = prompt_model(model, prompt)
+        elif _wants_skill_gap(payload.message):
+            reply = _run_skill_gap_analysis(payload, model)
+        else:
+            reply = _run_skill_gap_analysis(payload, model)
     else:
         prompt = _build_prompt(payload)
         reply = prompt_model(model, prompt)

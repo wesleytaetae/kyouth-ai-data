@@ -10,7 +10,7 @@ This project builds and containerizes a full-stack chat application with three m
 - a FastAPI backend that exposes a JSON chat API
 - an AI integration layer that reuses the Week 2 model utilities for Ollama, Gemini, and skill-gap analysis
 
-The frontend runs on `http://127.0.0.1:8000/`. The backend runs on `http://127.0.0.1:8001/chat`. Regular chat messages are sent to the Week 2 `prompt_mode.py` module, while resume uploads trigger the Week 2 `find_skil_gaps.py` logic.
+The frontend runs on `http://127.0.0.1:8000/`. The backend runs on `http://127.0.0.1:8001/chat`. Regular chat messages are sent to the Week 2 `prompt_mode.py` module. When a resume is uploaded, the backend can either run Week 2 `find_skil_gaps.py` or summarize the uploaded resume, depending on the user’s text instruction.
 
 ### Setup Instructions
 
@@ -126,12 +126,15 @@ Expected inputs:
 Expected outputs:
 
 - for plain chat: a model-generated response returned by the backend
-- for resume upload: a skill-gap summary containing missing skills, resume skill count, total checked skills, LLM-confirmed matches, elapsed time, and token estimate
+- for resume upload with `find skill gap`: a skill-gap summary containing missing skills, resume skill count, total checked skills, LLM-confirmed matches, elapsed time, and token estimate
+- for resume upload with `summarize this resume`: a model-generated summary of the uploaded resume text
 
 Behavior:
 
 - If no file is uploaded, the backend uses Week 2 `prompt_mode.py`.
-- If a file is uploaded, the frontend extracts the text in the browser and the backend ignores the typed message, then runs Week 2 `find_skil_gaps.py`.
+- If a file is uploaded and the message contains `find skill gap`, the backend runs Week 2 `find_skil_gaps.py`.
+- If a file is uploaded and the message contains `summarize this resume`, the backend sends the uploaded resume text through the normal AI prompt flow.
+- If a file is uploaded and neither phrase is present, the backend currently defaults to skill-gap analysis.
 
 ### API / Function Reference
 
@@ -141,7 +144,7 @@ Backend endpoints:
   - Returns `{"status": "ok"}`
 - `POST /chat`
   - Accepts JSON
-  - Used for both normal chat and resume skill-gap analysis
+  - Used for normal chat, resume skill-gap analysis, and resume summarization
 
 Example `POST /chat` payload:
 
@@ -208,7 +211,7 @@ Assumptions:
 - PDF text extraction happens in the browser before the request is sent.
 - Resume analysis depends on the Week 2 database file configured by `SKILL_GAP_DB_PATH`.
 - The backend expects JSON and does not accept multipart file uploads directly.
-- If a file is uploaded, the typed user message is ignored by design.
+- If a file is uploaded, the typed user message is used as an instruction to decide whether to summarize the resume or find skill gaps.
 
 Data flow:
 
@@ -218,9 +221,11 @@ Data flow:
 4. The browser extracts file text locally and sends a JSON payload to `POST /chat`.
 5. The backend checks whether `pdf_text` is present.
 6. If `pdf_text` is absent, the backend builds a prompt and calls Week 2 `prompt_mode.py`.
-7. If `pdf_text` is present, the backend writes the text to a temporary file and calls Week 2 `find_skil_gaps.py`.
-8. The backend returns JSON with `reply` and `model`.
-9. The frontend renders the response in the chat history and resets the composer state.
+7. If `pdf_text` is present and the message contains `summarize this resume`, the backend builds a prompt and summarizes the uploaded resume with the selected model.
+8. If `pdf_text` is present and the message contains `find skill gap`, the backend writes the text to a temporary file and calls Week 2 `find_skil_gaps.py`.
+9. If `pdf_text` is present and neither phrase is present, the backend currently defaults to skill-gap analysis.
+10. The backend returns JSON with `reply` and `model`.
+11. The frontend renders the response in the chat history and resets the composer state.
 
 ### Testing
 
@@ -228,8 +233,9 @@ Frontend testing:
 
 - Open `http://127.0.0.1:8000/`
 - Send a normal chat message and verify an assistant response appears
-- Upload a `.pdf` resume and verify the frontend shows extracted text and the backend returns a skill-gap summary
-- Upload a `.txt` resume and verify the same skill-gap flow works
+- Upload a `.pdf` resume, type `find skill gap`, and verify the backend returns a skill-gap summary
+- Upload a `.txt` resume, type `find skill gap`, and verify the same skill-gap flow works
+- Upload a `.pdf` or `.txt` resume, type `summarize this resume`, and verify the backend returns a resume summary
 - Verify the message box and file input reset after every submission
 
 Backend testing:
@@ -253,7 +259,15 @@ curl -X POST http://127.0.0.1:8001/chat \
 ```bash
 curl -X POST http://127.0.0.1:8001/chat \
   -H "Content-Type: application/json" \
-  -d '{"message":"ignore this","model":"llama3.1","pdf_filename":"resume.txt","pdf_text":"Python SQL Docker"}'
+  -d '{"message":"find skill gap","model":"llama3.1","pdf_filename":"resume.txt","pdf_text":"Python SQL Docker"}'
+```
+
+- Resume summary request:
+
+```bash
+curl -X POST http://127.0.0.1:8001/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message":"summarize this resume","model":"llama3.1","pdf_filename":"resume.txt","pdf_text":"Python SQL Docker"}'
 ```
 
 Docker communication checks:
@@ -264,13 +278,17 @@ Docker communication checks:
 - Confirm Ollama-backed chat works when `OLLAMA_BASE_URL` points to `host.docker.internal`
 
 ### Limitations
-
+- No persistence when it comes to chat history or uploaded files. The UI only shows the current session and the backend processes each request statelessly.
+- Resume upload routing depends on simple phrase matching such as `find skill gap` and `summarize this resume`, so unsupported wording may not trigger the intended branch.
 
 
 ### Architecture Reflection
 
-## Design Choice
+**Design Choices**
+I separated the frontend and backend to keep concerns clean: the UI can evolve independently from the API and model orchestration. This also makes it easier to reuse Week 2 logic from the backend without coupling it to presentation code. Containerizing each service with Docker keeps dependencies isolated and makes local setup consistent across machines; Docker Compose then provides a single, repeatable way to run both services together.
 
-## Trade-offs
+**Trade-offs**
+I prioritized ease of deployment and clarity over raw performance and feature depth. A simple HTML/JS frontend is faster to build and easier to debug, but it limits advanced UX features like streaming responses, rich state management, or offline storage. Using Compose over a single monolith improves modularity, but adds some overhead and cross-service configuration complexity.
 
-## Improvements
+**Improvements**
+With more time, I would add persistent storage for chat history and uploads, plus user authentication. I would also consider a more robust frontend framework for better UI state, file handling, and error recovery. Finally, I would add cloud deployment with environment-specific configuration, observability (logging/metrics), and scaling for higher traffic.
