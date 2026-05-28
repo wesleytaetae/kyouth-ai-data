@@ -180,6 +180,7 @@
 <body class="py-4">
     <main class="container chat-shell" data-backend-url="{{ backend_url }}">
         <section class="chat-card">
+            <!-- Header and high-level app instructions. -->
             <div class="chat-header p-4 p-md-5">
                 <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
                     <div>
@@ -192,6 +193,7 @@
                 </div>
             </div>
 
+            <!-- Chat transcript rendered entirely on the client. -->
             <div id="chat-history" class="chat-history p-3 p-md-4 d-flex flex-column gap-3">
                 <div class="message-row assistant">
                     <div class="message assistant">
@@ -201,6 +203,7 @@
                 </div>
             </div>
 
+            <!-- Composer area for prompts, model selection, and resume uploads. -->
             <div class="composer-card p-3 p-md-4">
                 <form id="chat-form" class="d-flex flex-column gap-3">
                     <div class="row g-3">
@@ -279,6 +282,7 @@
         };
 
         function resetComposer() {
+            // Clear the message box and any uploaded file after a request finishes.
             messageInput.value = "";
             fileInput.value = "";
             pdfPayload = { filename: null, text: "" };
@@ -286,6 +290,7 @@
         }
 
         function addMessage(role, content, variant = "assistant") {
+            // Append a formatted message bubble to the chat history.
             const row = document.createElement("div");
             row.className = `message-row ${variant}`;
 
@@ -320,6 +325,7 @@
         }
 
         async function extractPdfText(file) {
+            // Extract readable text from every page of an uploaded PDF.
             const bytes = new Uint8Array(await file.arrayBuffer());
             const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
             const pages = [];
@@ -335,6 +341,7 @@
         }
 
         async function extractFileText(file) {
+            // Route file extraction based on whether the upload is PDF or plain text.
             const lowerName = file.name.toLowerCase();
 
             if (lowerName.endsWith(".pdf") || file.type === "application/pdf") {
@@ -349,6 +356,7 @@
         }
 
         fileInput.addEventListener("change", async (event) => {
+            // Read the selected file immediately so the backend only receives JSON text.
             const [file] = event.target.files;
 
             if (!file) {
@@ -375,6 +383,7 @@
         });
 
         chatForm.addEventListener("submit", async (event) => {
+            // Send the current message and optional extracted resume text to the backend.
             event.preventDefault();
 
             const message = messageInput.value.trim();

@@ -40,6 +40,7 @@ if str(WEEK_2_DIR) not in sys.path:
 
 
 def _parse_origins(value: str) -> list[str]:
+    # Parse the comma-separated CORS origins from configuration.
     return [origin.strip() for origin in value.split(",") if origin.strip()]
 
 
@@ -72,14 +73,17 @@ class ChatResponse(BaseModel):
 
 
 def _wants_skill_gap(message: str) -> bool:
+    # Check whether the user asked for skill-gap analysis.
     return "find skill gap" in message.lower()
 
 
 def _wants_resume_summary(message: str) -> bool:
+    # Check whether the user asked for a resume summary.
     return "summarize this resume" in message.lower()
 
 
 def _resolve_db_path() -> str:
+    # Resolve the Week 2 database path for both local and container runs.
     raw_path = os.getenv("SKILL_GAP_DB_PATH") or os.getenv(
         "DB_PATH", "data/jobs_d3_eval.db"
     )
@@ -100,6 +104,7 @@ def _resolve_db_path() -> str:
 
 
 def _build_prompt(payload: ChatRequest) -> str:
+    # Build the prompt used for normal chat and resume summarization.
     sections = [f"User message:\n{payload.message.strip()}"]
 
     pdf_text = (payload.pdf_text or "").strip()
@@ -112,6 +117,7 @@ def _build_prompt(payload: ChatRequest) -> str:
 
 
 def _format_skill_gap_reply(result: find_skil_gaps.SkillGapResult) -> str:
+    # Convert the structured gap result into a readable text response.
     if result.gaps:
         gaps_text = ", ".join(result.gaps)
     else:
@@ -128,6 +134,7 @@ def _format_skill_gap_reply(result: find_skil_gaps.SkillGapResult) -> str:
 
 
 def _run_skill_gap_analysis(payload: ChatRequest, model: str) -> str:
+    # Run the Week 2 skill-gap pipeline against uploaded resume text.
     pdf_text = (payload.pdf_text or "").strip()
     if not pdf_text:
         return "[Error] Resume text is required for skill gap analysis."
@@ -159,11 +166,13 @@ def _run_skill_gap_analysis(payload: ChatRequest, model: str) -> str:
 
 @app.get("/health")
 def healthcheck() -> dict[str, str]:
+    # Expose a simple status endpoint for checks and debugging.
     return {"status": "ok"}
 
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(payload: ChatRequest) -> JSONResponse:
+    # Route each request to chat, resume summary, or skill-gap analysis.
     model = (payload.model or os.getenv("DEFAULT_MODEL", "llama3.1")).strip()
     pdf_text = (payload.pdf_text or "").strip()
     if pdf_text:

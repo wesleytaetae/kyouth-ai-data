@@ -18,6 +18,7 @@ load_dotenv(ENV_PATH)
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request) -> HTMLResponse:
+    # Render the chat page and inject the configured backend URL.
     return templates.TemplateResponse(
         request=request,
         name="chat_page.html",
